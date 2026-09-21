@@ -1,0 +1,63 @@
+# SENTINEL-X — Primary Configuration
+# -------------------------------------------------------
+# These are the DEFAULT values.
+# Override any value by setting the corresponding
+# environment variable or adding it to .env
+#
+# Naming convention: SECTION_KEY maps to env var SECTION_KEY
+# e.g., risk_low_max → RISK_LOW_MAX
+# -------------------------------------------------------
+
+# --- Application ---
+app_name: "SENTINEL-X"
+app_version: "0.1.0"
+debug: false
+
+# --- Server ---
+host: "0.0.0.0"
+port: 8000
+
+# --- Security Controls ---
+max_input_chars: 10000         # Hard limit on raw input character count
+request_rate_limit: "60/minute"
+
+# --- Database ---
+database_url: "sqlite+aiosqlite:///./sentinel_x.db"
+
+# --- Risk Engine Weights ---
+# IMPORTANT: These are provisional weights.
+# They are NOT scientifically optimized.
+# They are configurable and should be tuned experimentally.
+# Reference: See evaluation/weight_tuning.md (Phase 7)
+weight_injection: 0.30
+weight_pii: 0.15
+weight_secrets: 0.20
+weight_toxicity: 0.15
+weight_intent: 0.10
+weight_session: 0.10
+
+# --- Risk Thresholds ---
+# Scale: 0-100
+# These bands define risk levels and can be tuned.
+risk_low_max: 20         # 0-20   → LOW
+risk_moderate_max: 40    # 21-40  → MODERATE
+risk_high_max: 60        # 41-60  → HIGH
+risk_very_high_max: 80   # 61-80  → VERY_HIGH
+                         # 81-100 → CRITICAL
+
+# --- Prompt Injection Detector ---
+injection_layer2_threshold: 0.65   # TF-IDF cosine similarity threshold for Layer 2
+
+# --- Session Risk State Machine ---
+session_watch_threshold: 30         # Accumulated risk to enter WATCH state
+session_high_risk_threshold: 50     # Accumulated risk to enter HIGH_RISK state
+session_restricted_threshold: 70    # Accumulated risk to enter RESTRICTED state
+session_quarantined_threshold: 85   # Accumulated risk to enter QUARANTINED state
+
+# --- LLM ---
+default_llm_provider: "mock"   # mock | groq | gemini
+llm_timeout_seconds: 30.0
+
+# --- Logging ---
+log_level: "INFO"
+log_raw_input: false   # Never log raw user input in production

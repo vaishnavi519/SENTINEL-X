@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environments
+venv/
+env/
+ENV/
+
+# Pytest
+.pytest_cache/
+
+# Databases
+*.sqlite3
+# We will leave sentinel_x.db out of gitignore so it's committed if it's needed, or maybe we should ignore it. Let's ignore all .db files just in case.
+*.db
+
+# Environment variables
+.env
+.env.local
+
+# Node
+node_modules/
+dist/

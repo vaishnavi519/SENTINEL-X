@@ -1,0 +1,175 @@
+# SENTINEL-X — Security Policies
+# -------------------------------------------------------
+# Policies define WHAT triggers a BLOCK/SANITIZE/QUARANTINE decision.
+# The Policy Engine reads this file at startup.
+#
+# Policy actions (in order of severity):
+#   allow      → pass through unchanged
+#   sanitize   → redact sensitive content and pass through
+#   quarantine → hold for review, do not execute
+#   block      → reject immediately
+# -------------------------------------------------------
+
+policies:
+
+  # ── Input Pipeline Policies ──────────────────────────────
+
+  - id: P-001
+    name: block_direct_prompt_injection
+    description: Block detected direct prompt injection attempts
+    trigger:
+      detector: prompt_injection
+      min_confidence: 0.70
+      categories: [INJECTION, JAILBREAK, CRITICAL]
+    action: block
+    severity: high
+    message: "Direct prompt injection attempt detected."
+
+  - id: P-002
+    name: block_critical_injection
+    description: Block any CRITICAL injection with lower confidence threshold
+    trigger:
+      detector: prompt_injection
+      min_confidence: 0.50
+      categories: [CRITICAL]
+    action: block
+    severity: critical
+    message: "Critical injection attempt blocked."
+
+  - id: P-003
+    name: quarantine_suspicious_injection
+    description: Quarantine SUSPICIOUS injection for review
+    trigger:
+      detector: prompt_injection
+      min_confidence: 0.40
+      categories: [SUSPICIOUS]
+    action: quarantine
+    severity: medium
+    message: "Suspicious injection pattern — request quarantined."
+
+  - id: P-004
+    name: sanitize_pii_input
+    description: Redact PII found in user input before processing
+    trigger:
+      detector: pii
+      detected: true
+    action: sanitize
+    severity: medium
+    message: "PII detected and redacted from input."
+
+  - id: P-005
+    name: block_secret_in_input
+    description: Block requests that contain secrets/credentials
+    trigger:
+      detector: secrets
+      detected: true
+    action: block
+    severity: high
+    message: "Credential or secret detected in input."
+
+  - id: P-006
+    name: block_high_toxicity
+    description: Block highly toxic content
+    trigger:
+      detector: toxicity
+      min_confidence: 0.80
+    action: block
+    severity: high
+    message: "Highly toxic content detected."
+
+  - id: P-007
+    name: sanitize_moderate_toxicity
+    description: Sanitize moderately toxic content
+    trigger:
+      detector: toxicity
+      min_confidence: 0.60
+      max_confidence: 0.79
+    action: sanitize
+    severity: medium
+    message: "Moderately toxic content detected and sanitized."
+
+  # ── Output Pipeline Policies ─────────────────────────────
+
+  - id: P-008
+    name: block_pii_in_output
+    description: Block LLM output that contains PII
+    trigger:
+      pipeline: output
+      detector: pii
+      detected: true
+    action: block
+    severity: high
+    message: "PII detected in model output — response blocked."
+
+  - id: P-009
+    name: block_secret_in_output
+    description: Block LLM output that contains secrets/credentials
+    trigger:
+      pipeline: output
+      detector: secrets
+      detected: true
+    action: block
+    severity: critical
+    message: "Secret/credential detected in model output — response blocked."
+
+  - id: P-010
+    name: block_canary_in_output
+    description: Block output containing canary secrets (data exfiltration indicator)
+    trigger:
+      pipeline: output
+      detector: canary
+      detected: true
+    action: block
+    severity: critical
+    message: "Canary secret detected in output — potential data exfiltration."
+
+  - id: P-011
+    name: block_system_prompt_leakage
+    description: Block output that appears to leak system prompt content
+    trigger:
+      pipeline: output
+      detector: system_prompt_leak
+      detected: true
+    action: block
+    severity: critical
+    message: "System prompt leakage detected in output."
+
+  # ── Risk Engine Policies ─────────────────────────────────
+
+  - id: P-012
+    name: block_critical_risk
+    description: Block any request scoring CRITICAL risk (81-100)
+    trigger:
+      risk_level: CRITICAL
+    action: block
+    severity: critical
+    message: "Risk score is CRITICAL — request blocked."
+
+  - id: P-013
+    name: quarantine_very_high_risk
+    description: Quarantine VERY_HIGH risk requests
+    trigger:
+      risk_level: VERY_HIGH
+    action: quarantine
+    severity: high
+    message: "Risk score is VERY HIGH — request quarantined."
+
+  # ── Session Policies ──────────────────────────────────────
+
+  - id: P-014
+    name: block_quarantined_session
+    description: Block all requests from a QUARANTINED session
+    trigger:
+      session_state: QUARANTINED
+    action: block
+    severity: critical
+    message: "Session is quarantined — all requests blocked until review."
+
+  - id: P-015
+    name: restrict_high_risk_session
+    description: Apply stricter thresholds for sessions in HIGH_RISK or RESTRICTED state
+    trigger:
+      session_state: [HIGH_RISK, RESTRICTED]
+    action: quarantine   # Escalate quarantine threshold
+    severity: high
+    message: "Elevated session risk — stricter policy applied."

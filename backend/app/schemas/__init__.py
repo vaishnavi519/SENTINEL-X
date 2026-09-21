@@ -1,0 +1,1 @@
+"""SENTINEL-X schemas package."""
