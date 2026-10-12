@@ -24,7 +24,6 @@ from fastapi.responses import JSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
-
 from app.config import get_settings
 
 # ── Structured logging setup ──────────────────────────────────────────────────
@@ -202,11 +201,13 @@ def create_app() -> FastAPI:
     from app.api.analyze import router as analyze_router
     from app.api.chat import router as chat_router
     from app.api.audit import router as audit_router
+    from app.api.document import router as document_router
 
     app.include_router(health_router)                                    # GET /health
     app.include_router(analyze_router, prefix="/api/v1")                 # POST /api/v1/analyze/input
     app.include_router(chat_router, prefix="/api/v1")                    # POST /api/v1/chat
     app.include_router(audit_router, prefix="/api/v1")                   # GET /api/v1/audit/...
+    app.include_router(document_router, prefix="/api/v1")
 
     return app
 

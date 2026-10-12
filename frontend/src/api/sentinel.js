@@ -1,3 +1,4 @@
+
 /**
  * SENTINEL-X — Frontend API Client
  * Centralised fetch wrapper for all backend endpoints.
@@ -6,15 +7,35 @@
 
 const BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:8000";
 
+// ── Central request helper ─────────────────────────────────────────────────
 async function request(path, options = {}) {
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
+
+  // Let the browser set multipart Content-Type and its boundary for uploads.
+  // Keep JSON Content-Type for the existing JSON API requests.
+  const headers = isFormData
+    ? { ...options.headers }
+    : { "Content-Type": "application/json", ...options.headers };
+
   const res = await fetch(`${BASE}${path}`, {
-    headers: { "Content-Type": "application/json", ...options.headers },
     ...options,
+    headers,
   });
+
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ detail: res.statusText }));
-    throw new Error(err.detail ?? `HTTP ${res.status}`);
+    const err = await res.json().catch(() => ({
+      detail: res.statusText || `HTTP ${res.status}`,
+    }));
+
+    const message =
+      typeof err.detail === "string"
+        ? err.detail
+        : `HTTP ${res.status}`;
+
+    throw new Error(message);
   }
+
   return res.json();
 }
 
@@ -25,8 +46,29 @@ export const getHealth = () => request("/health");
 export const analyzeInput = (text, sessionId, source = "USER_INPUT") =>
   request("/api/v1/analyze/input", {
     method: "POST",
-    body: JSON.stringify({ text, session_id: sessionId, source }),
+    body: JSON.stringify({
+      text,
+      session_id: sessionId,
+      source,
+    }),
   });
+
+// ── Document Scanner ───────────────────────────────────────────────────────
+// Upload a PDF, DOCX, or TXT file as multipart/form-data.
+// Scanning starts when the user invokes this function.
+export const analyzeDocument = (file) => {
+  if (!file) {
+    return Promise.reject(new Error("Please select a document first."));
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return request("/api/v1/analyze/document", {
+    method: "POST",
+    body: formData,
+  });
+};
 
 // ── Chat (full pipeline) ───────────────────────────────────────────────────
 export const sendChat = (text, sessionId, systemPrompt = null) =>
@@ -40,10 +82,20 @@ export const sendChat = (text, sessionId, systemPrompt = null) =>
   });
 
 // ── Audit Logs ─────────────────────────────────────────────────────────────
-export const getAuditLogs = ({ limit = 50, offset = 0, decision, session_id } = {}) => {
-  const params = new URLSearchParams({ limit, offset });
+export const getAuditLogs = ({
+  limit = 50,
+  offset = 0,
+  decision,
+  session_id,
+} = {}) => {
+  const params = new URLSearchParams({
+    limit: String(limit),
+    offset: String(offset),
+  });
+
   if (decision) params.set("decision", decision);
   if (session_id) params.set("session_id", session_id);
+
   return request(`/api/v1/audit/logs?${params}`);
 };
 
@@ -52,10 +104,14 @@ export const getAuditStats = () => request("/api/v1/audit/stats");
 
 // ── Session History ────────────────────────────────────────────────────────
 export const getSessionHistory = (sessionId) =>
-  request(`/api/v1/audit/session/${sessionId}`);
+  request(`/api/v1/audit/session/${encodeURIComponent(sessionId)}`);
 
 // ── Quarantine ─────────────────────────────────────────────────────────────
-export const getQuarantineLogs = () => request("/api/v1/audit/quarantine");
-export const actionQuarantine = (qId, action) =>
-  request(`/api/v1/audit/quarantine/${qId}/action?action=${action}`, { method: "POST" });
+export const getQuarantineLogs = () =>
+  request("/api/v1/audit/quarantine");
 
+export const actionQuarantine = (qId, action) =>
+  request(
+    `/api/v1/audit/quarantine/${encodeURIComponent(qId)}/action?action=${encodeURIComponent(action)}`,
+    { method: "POST" }
+  );

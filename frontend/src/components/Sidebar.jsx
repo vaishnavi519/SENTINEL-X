@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
+
+import React from 'react';
 
 const NAV_ITEMS = [
-  { id: 'dashboard',    icon: '⬡',  label: 'Dashboard' },
+  { id: 'dashboard',   icon: '⬡',  label: 'Dashboard' },
   { id: 'attacklab',   icon: '⚡',  label: 'Attack Lab' },
   { id: 'chat',        icon: '💬',  label: 'Secure Chat' },
-  { id: 'quarantine',  icon: '🛡️',  label: 'Quarantine Center' },
+  { id: 'quarantine',  icon: '🛡️', label: 'Quarantine Center' },
+  { id: 'documents',   icon: '📄',  label: 'Document Scanner' },
 ];
 
-export default function Sidebar({ activePage, onNavigate, backendStatus }) {
+export default function Sidebar({
+  activePage,
+  onNavigate,
+  backendStatus,
+}) {
   return (
     <nav className="sidebar">
       <div className="sidebar-logo">
@@ -16,17 +22,20 @@ export default function Sidebar({ activePage, onNavigate, backendStatus }) {
       </div>
 
       <span className="nav-section">Navigation</span>
-      {NAV_ITEMS.map(item => (
+
+      {NAV_ITEMS.map((item) => (
         <button
           key={item.id}
-          className={`nav-item${activePage === item.id ? ' active' : ''}`}
+          type="button"
+          className={`nav-item${
+            activePage === item.id ? ' active' : ''
+          }`}
           onClick={() => onNavigate(item.id)}
         >
           <span className="nav-icon">{item.icon}</span>
           {item.label}
         </button>
       ))}
-
     </nav>
   );
 }
