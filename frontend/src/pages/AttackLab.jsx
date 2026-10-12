@@ -30,6 +30,9 @@ export default function AttackLab() {
   const [result,   setResult]   = useState(null);
   const [error,    setError]    = useState(null);
   const [tab,      setTab]      = useState('detectors');
+  const [campaignMode, setCampaignMode] = useState(false);
+  const [campaignResults, setCampaignResults] = useState([]);
+  const [campaignRunning, setCampaignRunning] = useState(false);
   const sessionId = useId().replace(/:/g, '') + '-lab';
 
   const run = useCallback(async () => {
@@ -48,10 +51,30 @@ export default function AttackLab() {
     }
   }, [text, source, sessionId]);
 
-  const injectSample = (sample) => setText(sample.text);
+  const injectSample = (sample) => {
+    setText(sample.text);
+    if (campaignMode) setCampaignMode(false);
+  };
 
   const handleKey = (e) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) run();
+  };
+
+  const runCampaign = async () => {
+    setCampaignRunning(true);
+    setCampaignResults([]);
+    setError(null);
+    const results = [];
+    for (const sample of SAMPLE_ATTACKS) {
+      try {
+        const data = await analyzeInput(sample.text, sessionId, 'USER_INPUT');
+        results.push({ label: sample.label, text: sample.text, data, error: null });
+      } catch (e) {
+        results.push({ label: sample.label, text: sample.text, data: null, error: e.message });
+      }
+      setCampaignResults([...results]);
+    }
+    setCampaignRunning(false);
   };
 
   const riskGradient = result ? (RISK_GRADIENT_MAP[result.risk?.level] ?? RISK_GRADIENT_MAP.LOW) : null;
@@ -65,7 +88,13 @@ export default function AttackLab() {
           <div className="card">
             <div className="card-header">
               <span className="card-title">⚡ Input</span>
-              <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Ctrl+Enter to analyze</span>
+              <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer' }}>
+                  <input type="checkbox" checked={campaignMode} onChange={e => setCampaignMode(e.target.checked)} />
+                  Campaign Mode
+                </label>
+                <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>Ctrl+Enter to analyze</span>
+              </div>
             </div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
               <div>
@@ -88,13 +117,24 @@ export default function AttackLab() {
                   <option value="SYSTEM">SYSTEM — System message</option>
                 </select>
               </div>
-              <button
-                className="btn btn-primary w-full"
-                onClick={run}
-                disabled={loading || !text.trim()}
-              >
-                {loading ? <><span className="spinner" /> Analyzing…</> : '🔍 Analyze Security'}
-              </button>
+              {campaignMode ? (
+                <button
+                  className="btn btn-primary w-full"
+                  onClick={runCampaign}
+                  disabled={campaignRunning}
+                  style={{ background: 'var(--accent-purple)', borderColor: 'var(--accent-purple)' }}
+                >
+                  {campaignRunning ? <><span className="spinner" /> Running Campaign…</> : '🚀 Run Attack Campaign (All Samples)'}
+                </button>
+              ) : (
+                <button
+                  className="btn btn-primary w-full"
+                  onClick={run}
+                  disabled={loading || !text.trim()}
+                >
+                  {loading ? <><span className="spinner" /> Analyzing…</> : '🔍 Analyze Security'}
+                </button>
+              )}
             </div>
           </div>
 
@@ -124,7 +164,65 @@ export default function AttackLab() {
             </div>
           )}
 
-          {!result && !error && (
+          {campaignMode && (
+            <div className="card fade-in">
+              <div className="card-header"><span className="card-title">🚀 Campaign Evaluation Metrics</span></div>
+              <div className="card-body">
+                {campaignResults.length === 0 ? (
+                  <div className="empty-state">
+                    <span className="icon">🚀</span>
+                    <p>Run the campaign to evaluate the security pipeline against all sample payloads sequentially.</p>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 24 }}>
+                      <div style={{ background: 'rgba(0,0,0,0.3)', padding: 16, borderRadius: 8 }}>
+                        <div style={{ fontSize: 24, fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{campaignResults.length} / {SAMPLE_ATTACKS.length}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Tests Run</div>
+                      </div>
+                      <div style={{ background: 'rgba(255,77,109,0.1)', border: '1px solid rgba(255,77,109,0.3)', padding: 16, borderRadius: 8 }}>
+                        <div style={{ fontSize: 24, fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--col-block)' }}>
+                          {campaignResults.filter(r => r.data?.decision === 'BLOCK' || r.data?.decision === 'QUARANTINE' || r.data?.decision === 'TERMINATE_SESSION').length}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--col-block)' }}>Threats Mitigated</div>
+                      </div>
+                      <div style={{ background: 'rgba(251,191,36,0.1)', border: '1px solid rgba(251,191,36,0.3)', padding: 16, borderRadius: 8 }}>
+                        <div style={{ fontSize: 24, fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--col-sanitize)' }}>
+                          {campaignResults.filter(r => r.data?.decision === 'SANITIZE').length}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--col-sanitize)' }}>Threats Sanitized</div>
+                      </div>
+                      <div style={{ background: 'rgba(0,255,157,0.1)', border: '1px solid rgba(0,255,157,0.3)', padding: 16, borderRadius: 8 }}>
+                        <div style={{ fontSize: 24, fontFamily: 'var(--font-mono)', fontWeight: 700, color: 'var(--col-allow)' }}>
+                          {campaignResults.filter(r => r.data?.decision === 'ALLOW').length}
+                        </div>
+                        <div style={{ fontSize: 11, color: 'var(--col-allow)' }}>Allowed / Benign</div>
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                      {campaignResults.map((res, i) => (
+                        <div key={i} style={{ padding: 12, border: '1px solid var(--border)', borderRadius: 8, background: 'rgba(0,0,0,0.2)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                            <span style={{ fontWeight: 600 }}>{res.label}</span>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <RiskBadge level={res.data?.risk?.level} />
+                              <DecisionBadge decision={res.data?.decision} />
+                            </div>
+                          </div>
+                          <div style={{ fontSize: 12, fontFamily: 'var(--font-mono)', color: 'var(--text-muted)' }}>
+                            {res.text}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {!campaignMode && !result && !error && (
             <div className="card">
               <div className="empty-state">
                 <span className="icon">🛡️</span>
@@ -133,7 +231,7 @@ export default function AttackLab() {
             </div>
           )}
 
-          {result && (
+          {!campaignMode && result && (
             <>
               {/* Decision Hero */}
               <div className="card fade-in">

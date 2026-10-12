@@ -127,11 +127,11 @@ export default function Dashboard() {
   const [loadStats,  setLoadStats] = useState(true);
   const [loadLogs,   setLoadLogs]  = useState(true);
   const [error,      setError]     = useState(null);
+  const [isLive,     setIsLive]    = useState(true);
 
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (silent = false) => {
     try {
-      setLoadStats(true);
-      setLoadLogs(true);
+      if (!silent) { setLoadStats(true); setLoadLogs(true); }
       const [s, l] = await Promise.all([getAuditStats(), getAuditLogs({ limit: 10 })]);
       setStats(s);
       setLogs(l.data ?? []);
@@ -144,6 +144,12 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  useEffect(() => {
+    if (!isLive) return;
+    const timer = setInterval(() => fetchAll(true), 3000);
+    return () => clearInterval(timer);
+  }, [isLive, fetchAll]);
 
   return (
     <div className="fade-in">
@@ -207,8 +213,14 @@ export default function Dashboard() {
       {/* Recent logs */}
       <div className="card">
         <div className="card-header">
-          <span className="card-title">📋 Recent Security Events</span>
-          <button className="btn btn-ghost btn-sm" onClick={fetchAll}>↻ Refresh</button>
+          <span className="card-title">📋 Live Security Event Stream</span>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, cursor: 'pointer', color: isLive ? 'var(--col-allow)' : 'var(--text-muted)' }}>
+              <input type="checkbox" checked={isLive} onChange={e => setIsLive(e.target.checked)} />
+              {isLive ? '🔴 LIVE' : '⏸️ PAUSED'}
+            </label>
+            <button className="btn btn-ghost btn-sm" onClick={() => fetchAll()}>↻ Refresh</button>
+          </div>
         </div>
         <div className="card-body" style={{ padding: 0 }}>
           <AuditTable logs={logs} loading={loadLogs} />

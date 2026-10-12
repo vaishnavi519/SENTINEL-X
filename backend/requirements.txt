@@ -58,4 +58,6 @@ anyio>=4.7.0              # 🟢 Async compatibility layer
 # ============================================================
 # OPTIONAL — Phase 4: LLM Providers (all free tiers) 🟡
 # ============================================================
-# (No extra packages needed — httpx handles REST calls)
+google-genai>=2.29.0          # 🟢 Official Google Gemini SDK (handles AQ. key format)
+# (httpx also used for Groq REST calls)
+

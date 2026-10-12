@@ -53,3 +53,9 @@ export const getAuditStats = () => request("/api/v1/audit/stats");
 // ── Session History ────────────────────────────────────────────────────────
 export const getSessionHistory = (sessionId) =>
   request(`/api/v1/audit/session/${sessionId}`);
+
+// ── Quarantine ─────────────────────────────────────────────────────────────
+export const getQuarantineLogs = () => request("/api/v1/audit/quarantine");
+export const actionQuarantine = (qId, action) =>
+  request(`/api/v1/audit/quarantine/${qId}/action?action=${action}`, { method: "POST" });
+

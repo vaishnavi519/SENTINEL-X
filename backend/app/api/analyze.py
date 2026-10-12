@@ -238,6 +238,27 @@ async def analyze_input(
                 secret_result=secret_raw,
             )
 
+        # ── Step 10b: Quarantine Logic ────────────────────────────────────────
+        if decision == "QUARANTINE":
+            try:
+                from app.db.database import get_db_session
+                from app.models.quarantine import QuarantineRecord
+                import json
+                async with get_db_session() as db:
+                    q_rec = QuarantineRecord(
+                        request_id=request_id,
+                        session_id=session_id,
+                        input_text=request_body.text,
+                        input_source=request_body.source,
+                        risk_score=risk.score,
+                        threats=[f.model_dump() for f in risk.contributing_factors],
+                        decision_reason=policy.reason,
+                        status="QUARANTINED"
+                    )
+                    db.add(q_rec)
+            except Exception:
+                pass
+
         # ── Step 11: Update Session Risk ──────────────────────────────────────
         threat_labels = []
         if injection_raw.detected:
@@ -251,6 +272,12 @@ async def analyze_input(
             decision=decision,
             threats=threat_labels,
         )
+
+        # ── Step 11b: Force Session Quarantine ────────────────────────────────
+        if decision == "QUARANTINE":
+            session_tracker.force_quarantine(session_id)
+            updated_session.state = "QUARANTINED"
+
         session_info = SessionInfo(
             session_id=session_id,
             state=updated_session.state,

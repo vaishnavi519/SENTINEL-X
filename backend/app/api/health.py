@@ -89,7 +89,7 @@ async def health_check() -> HealthResponse:
 
     # Check PII Detector
     try:
-        from app.detectors.pii_detector import get_pii_detector
+        from app.detectors import get_pii_detector
         det = get_pii_detector()
         det.analyze("test@example.com")
         detector_status["pii_detector"] = "ok"
@@ -99,7 +99,7 @@ async def health_check() -> HealthResponse:
 
     # Check Secret Detector
     try:
-        from app.detectors.secret_detector import get_secret_detector
+        from app.detectors import get_secret_detector
         det = get_secret_detector()
         det.analyze("test string")
         detector_status["secret_detector"] = "ok"
@@ -109,7 +109,7 @@ async def health_check() -> HealthResponse:
 
     # Check Toxicity Detector
     try:
-        from app.detectors.toxicity_detector import get_toxicity_detector
+        from app.detectors import get_toxicity_detector
         det = get_toxicity_detector()
         det.analyze("hello world")
         detector_status["toxicity_detector"] = "ok"
@@ -119,7 +119,7 @@ async def health_check() -> HealthResponse:
 
     # Check Intent Analyzer
     try:
-        from app.detectors.intent_analyzer import get_intent_analyzer
+        from app.detectors import get_intent_analyzer
         det = get_intent_analyzer()
         det.analyze("help me")
         detector_status["intent_analyzer"] = "ok"

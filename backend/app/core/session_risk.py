@@ -5,9 +5,9 @@ Maintains multi-turn state machines to track cumulative user risk
 and detect progressive / distributed prompt injection attacks.
 
 State Machine:
-  NORMAL ──(≥30)──► WATCH ──(≥50)──► HIGH_RISK ──(≥70)──► RESTRICTED ──(≥85)──► QUARANTINED
-     ▲                │                 │                    │                       │
-     └───(decay)──────┴──────(decay)────┴──────(decay)───────┴───────────────────────┘
+  NORMAL ──(≥30)──► WATCH ──(≥50)──► HIGH_RISK ──(≥70)──► RESTRICTED ──(≥85)──► QUARANTINED ──(≥95)──► TERMINATED
+     ▲                │                 │                    │                       │                      │
+     └───(decay)──────┴──────(decay)────┴──────(decay)───────┴───────────────────────┴──────────────────────┘
 
 Features:
   - Exponential moving accumulation: 60% historical risk + 40% current interaction risk
@@ -32,7 +32,7 @@ class SessionTurn:
 @dataclass
 class SessionRecord:
     session_id: str
-    state: str = "NORMAL"  # NORMAL | WATCH | HIGH_RISK | RESTRICTED | QUARANTINED
+    state: str = "NORMAL"  # NORMAL | WATCH | HIGH_RISK | RESTRICTED | QUARANTINED | TERMINATED
     accumulated_risk: float = 0.0
     request_count: int = 0
     history: list[SessionTurn] = field(default_factory=list)
@@ -77,7 +77,9 @@ class SessionRiskTracker:
 
         # Transition State Machine
         acc = session.accumulated_risk
-        if acc >= self.settings.session_quarantined_threshold:
+        if acc >= self.settings.session_terminated_threshold:
+            session.state = "TERMINATED"
+        elif acc >= self.settings.session_quarantined_threshold:
             session.state = "QUARANTINED"
         elif acc >= self.settings.session_restricted_threshold:
             session.state = "RESTRICTED"
@@ -106,6 +108,28 @@ class SessionRiskTracker:
         rec = SessionRecord(session_id=session_id)
         self._sessions[session_id] = rec
         return rec
+
+    def force_quarantine(self, session_id: str) -> None:
+        session = self.get_or_create(session_id)
+        session.state = "QUARANTINED"
+
+    def remove_quarantine(self, session_id: str) -> None:
+        session = self.get_or_create(session_id)
+        acc = session.accumulated_risk
+        if acc >= self.settings.session_terminated_threshold:
+            session.state = "TERMINATED"
+        elif acc >= self.settings.session_restricted_threshold:
+            session.state = "RESTRICTED"
+        elif acc >= self.settings.session_high_risk_threshold:
+            session.state = "HIGH_RISK"
+        elif acc >= self.settings.session_watch_threshold:
+            session.state = "WATCH"
+        else:
+            session.state = "NORMAL"
+
+    def terminate(self, session_id: str) -> None:
+        session = self.get_or_create(session_id)
+        session.state = "TERMINATED"
 
 
 _session_tracker = None

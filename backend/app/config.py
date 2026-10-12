@@ -76,6 +76,7 @@ class Settings(BaseSettings):
     session_high_risk_threshold: int = 50
     session_restricted_threshold: int = 70
     session_quarantined_threshold: int = 85
+    session_terminated_threshold: int = 95
 
     # ── LLM ────────────────────────────────────────────────────
     default_llm_provider: str = "mock"   # mock | groq | gemini

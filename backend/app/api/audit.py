@@ -10,10 +10,13 @@ Endpoints:
 """
 
 from typing import Any
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, HTTPException
 
 from app.core.audit_logger import AuditLogger
 from app.core.session_risk import get_session_tracker
+from app.models.quarantine import QuarantineRecord
+from app.db.database import get_db_session
+from sqlalchemy import select, desc
 
 router = APIRouter(prefix="/audit", tags=["Audit & Telemetry"])
 
@@ -58,3 +61,34 @@ async def get_session_history(session_id: str) -> dict[str, Any]:
             for turn in session.history
         ],
     }
+
+@router.get("/quarantine", summary="Get Quarantined Requests")
+async def get_quarantine_logs() -> dict[str, Any]:
+    async with get_db_session() as session:
+        stmt = select(QuarantineRecord).order_by(desc(QuarantineRecord.timestamp))
+        result = await session.execute(stmt)
+        records = result.scalars().all()
+        return {"data": [r.to_dict() for r in records]}
+
+@router.post("/quarantine/{q_id}/action", summary="Action on Quarantined Request")
+async def action_quarantine(q_id: str, action: str = Query(...)) -> dict[str, Any]:
+    if action not in ("RELEASE", "REJECT"):
+        raise HTTPException(status_code=400, detail="Invalid action")
+    
+    async with get_db_session() as session:
+        stmt = select(QuarantineRecord).where(QuarantineRecord.q_id == q_id)
+        result = await session.execute(stmt)
+        record = result.scalars().first()
+        
+        if not record:
+            raise HTTPException(status_code=404, detail="Quarantine record not found")
+            
+        record.status = action + "D" # RELEASED or REJECTED
+        
+        session_tracker = get_session_tracker()
+        if action == "RELEASE":
+            session_tracker.remove_quarantine(record.session_id)
+        elif action == "REJECT":
+            session_tracker.terminate(record.session_id)
+            
+        return {"status": "success", "record": record.to_dict()}

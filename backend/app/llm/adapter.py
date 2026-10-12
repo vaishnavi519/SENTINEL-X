@@ -52,6 +52,9 @@ def get_llm_provider(name: str | None = None) -> BaseLLMProvider:
     if provider_name == "groq":
         from app.llm.groq_provider import GroqProvider
         return GroqProvider()
+    elif provider_name == "gemini":
+        from app.llm.gemini_provider import GeminiProvider
+        return GeminiProvider()
     elif provider_name == "mock":
         from app.llm.mock_llm import MockLLMProvider
         return MockLLMProvider()

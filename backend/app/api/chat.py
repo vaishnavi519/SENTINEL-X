@@ -54,7 +54,7 @@ async def chat_endpoint(
         input_analysis = await analyze_input(input_req, request)
 
         # ── Step 2: Policy Enforcement on Input ───────────────────────────────
-        if input_analysis.decision in ("BLOCK", "QUARANTINE"):
+        if input_analysis.decision in ("BLOCK", "QUARANTINE", "TERMINATE_SESSION"):
             total_latency_ms = (time.perf_counter() - start_time) * 1000
             return ChatResponse(
                 request_id=request_id,

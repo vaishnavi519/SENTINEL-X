@@ -101,7 +101,7 @@ class RiskResult(BaseModel):
 
 class PolicyDecision(BaseModel):
     """Output from the Policy Engine."""
-    action: Literal["ALLOW", "SANITIZE", "QUARANTINE", "BLOCK"]
+    action: Literal["ALLOW", "SANITIZE", "QUARANTINE", "BLOCK", "TERMINATE_SESSION"]
     triggered_policies: list[str] = Field(default_factory=list)
     reason: str
 
@@ -111,7 +111,7 @@ class PolicyDecision(BaseModel):
 class SessionInfo(BaseModel):
     """Current session risk state."""
     session_id: str
-    state: Literal["NORMAL", "WATCH", "HIGH_RISK", "RESTRICTED", "QUARANTINED"]
+    state: Literal["NORMAL", "WATCH", "HIGH_RISK", "RESTRICTED", "QUARANTINED", "TERMINATED"]
     accumulated_risk: float
     request_count: int
 
@@ -129,7 +129,7 @@ class SecurityReceipt(BaseModel):
     request_id: str
     session_id: str
     timestamp: str
-    decision: Literal["ALLOW", "SANITIZE", "QUARANTINE", "BLOCK"]
+    decision: Literal["ALLOW", "SANITIZE", "QUARANTINE", "BLOCK", "TERMINATE_SESSION"]
     risk_score: float
     risk_level: str
     threats_detected: list[str]
@@ -151,7 +151,7 @@ class AnalyzeInputResponse(BaseModel):
     """
     request_id: str
     session_id: str
-    decision: Literal["ALLOW", "SANITIZE", "QUARANTINE", "BLOCK"]
+    decision: Literal["ALLOW", "SANITIZE", "QUARANTINE", "BLOCK", "TERMINATE_SESSION"]
 
     # Input analysis
     normalization: NormalizationInfo
@@ -185,7 +185,7 @@ class ChatResponse(BaseModel):
     """
     request_id: str
     session_id: str
-    decision: Literal["ALLOW", "SANITIZE", "QUARANTINE", "BLOCK"]
+    decision: Literal["ALLOW", "SANITIZE", "QUARANTINE", "BLOCK", "TERMINATE_SESSION"]
 
     # LLM response (None if blocked/quarantined)
     response: str | None = None

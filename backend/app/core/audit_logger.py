@@ -55,6 +55,7 @@ class AuditLogger:
             sanitizes = await session.scalar(select(func.count(AuditLog.id)).where(AuditLog.decision == "SANITIZE")) or 0
             quarantines = await session.scalar(select(func.count(AuditLog.id)).where(AuditLog.decision == "QUARANTINE")) or 0
             allows = await session.scalar(select(func.count(AuditLog.id)).where(AuditLog.decision == "ALLOW")) or 0
+            terminated = await session.scalar(select(func.count(AuditLog.id)).where(AuditLog.decision == "TERMINATE_SESSION")) or 0
 
             avg_latency = await session.scalar(select(func.avg(AuditLog.security_latency_ms))) or 0.0
             avg_risk = await session.scalar(select(func.avg(AuditLog.risk_score))) or 0.0
@@ -72,6 +73,7 @@ class AuditLogger:
                     "SANITIZE": sanitizes,
                     "QUARANTINE": quarantines,
                     "BLOCK": blocks,
+                    "TERMINATE_SESSION": terminated,
                 },
                 "threat_counts": {
                     "prompt_injection": injections,

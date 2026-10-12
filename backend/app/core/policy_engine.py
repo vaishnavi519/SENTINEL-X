@@ -7,7 +7,7 @@ Decouples policy rules from enforcement code.
 Supports:
   - Dynamic YAML loading from config/policies.yaml
   - Evaluation of input pipeline, output pipeline, risk thresholds, and session state
-  - Strict hierarchical action precedence: BLOCK > QUARANTINE > SANITIZE > ALLOW
+  - Strict hierarchical action precedence: TERMINATE_SESSION > BLOCK > QUARANTINE > SANITIZE > ALLOW
   - Audit logging of specific triggered policy IDs and human-readable rationales
 """
 
@@ -51,6 +51,7 @@ class PolicyEngine:
             {"id": "P-012", "name": "block_critical_risk", "action": "block"},
             {"id": "P-013", "name": "quarantine_very_high_risk", "action": "quarantine"},
             {"id": "P-014", "name": "block_quarantined_session", "action": "block"},
+            {"id": "P-015", "name": "terminate_terminated_session", "action": "terminate_session"},
         ]
 
     def evaluate(
@@ -68,7 +69,7 @@ class PolicyEngine:
         action = "ALLOW"
         reason = "All security policies satisfied."
 
-        action_precedence = {"BLOCK": 4, "QUARANTINE": 3, "SANITIZE": 2, "ALLOW": 1}
+        action_precedence = {"TERMINATE_SESSION": 5, "BLOCK": 4, "QUARANTINE": 3, "SANITIZE": 2, "ALLOW": 1}
 
         def _escalate(new_action: str, policy_id: str, rule_reason: str):
             nonlocal action, reason
@@ -77,8 +78,10 @@ class PolicyEngine:
                 action = new_action.upper()
                 reason = rule_reason
 
-        # 1. Quarantined Session Policy (P-014)
-        if session_state == "QUARANTINED":
+        # 1. Quarantined / Terminated Session Policy
+        if session_state == "TERMINATED":
+            _escalate("TERMINATE_SESSION", "P-015 (Terminated Session)", "Session is terminated due to critical repeated attacks — all requests rejected.")
+        elif session_state == "QUARANTINED":
             _escalate("BLOCK", "P-014 (Quarantined Session)", "Session is quarantined — all requests blocked.")
 
         # 2. Canary Token Policy (P-010 / P-008)

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const DECISION_ICONS = { ALLOW: '✅', SANITIZE: '🔧', QUARANTINE: '🔒', BLOCK: '🛑' };
+const DECISION_ICONS = { ALLOW: '✅', SANITIZE: '🔧', QUARANTINE: '🔒', BLOCK: '🛑', TERMINATE_SESSION: '💀' };
 
 export function DecisionBadge({ decision }) {
   if (!decision) return null;
@@ -8,7 +8,7 @@ export function DecisionBadge({ decision }) {
   return <span className={cls}>{DECISION_ICONS[decision] || ''} {decision}</span>;
 }
 
-const RISK_ICONS = { LOW: '🟢', MODERATE: '🟡', HIGH: '🟠', VERY_HIGH: '🔴', CRITICAL: '💀' };
+const RISK_ICONS = { LOW: '🟢', MODERATE: '🟡', HIGH: '🟠', VERY_HIGH: '🔴', CRITICAL: '💀', TERMINATED: '☠️' };
 
 export function RiskBadge({ level }) {
   if (!level) return null;
